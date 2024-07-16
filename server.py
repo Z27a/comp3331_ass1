@@ -17,7 +17,7 @@ class Server:
 
         while True:
             data, addr = self.sock.recvfrom(1024)
-            header, question = decode_query(data)
+            header, question = decode_request(data)
             self.process_request(header, question, addr)
 
             # child = threading.Thread(target=self._process_request, args=(data, addr))
@@ -30,9 +30,43 @@ class Server:
 
         time.sleep(delay)
 
-        response, _ = make_query(question.qname, question.qtype)
+        ans, auths, adds = self.find_resource_records()
+        response = self.make_response(header, question, ans, auths, adds)
 
         self.sock.sendto(response, addr)
+
+    def find_resource_records(self):
+        ans = ResourceRecord("Answer", "A | 192.31.80.30")
+        auths = ResourceRecord("Authority", "CNAME | bar.example.com.")
+        adds = ResourceRecord("Additional", "NS | b.root-servers.net.")
+        return ans, auths, adds
+
+    def make_response(self, header, question, ans, auth, add):
+        question = question.encode()
+        size = len(question)
+
+        if ans is not None:  # can this really be none?
+            ans = ans.encode()
+            size += len(ans)
+        if auth is not None:
+            auth = auth.encode()
+            size += len(auth)
+        if add is not None:
+            add = add.encode()
+            size += len(add)
+
+        ba = bytearray()
+        ba.extend(Header(size, header.qid).encode())
+        ba.extend(question)
+        if ans is not None:  # can this really be none?
+            ba.extend(ans)
+        if auth is not None:
+            ba.extend(auth)
+        if add is not None:
+            ba.extend(add)
+
+        return bytes(ba)
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -44,4 +78,3 @@ if __name__ == '__main__':
         server.run()
     except KeyboardInterrupt:
         exit(0)
-
