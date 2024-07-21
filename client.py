@@ -29,10 +29,6 @@ def client(server_port, qname, qtype, timeout):
             res, _ = sock.recvfrom(1024)
             header, question, rrs = decode_response(res)
 
-            # todo: remove
-            if header.qid != qid:
-                print("ERR: qids do not match")
-
             for rr in rrs:
                 print(f"{rr.str_type.upper()} SECTION:")
                 print(rr.payload)

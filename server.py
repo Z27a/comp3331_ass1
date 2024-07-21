@@ -29,9 +29,8 @@ class Server:
                         self.addr[domain_name] = [data]
                 elif rtype == "CNAME":
                     if domain_name in self.cname:
-                        print(f"ERR: multiple CNAME entries found for {domain_name} in master file")
-                    else:
-                        self.cname[domain_name] = data
+                        print(f"WARN: multiple CNAME entries found for {domain_name} in master file")
+                    self.cname[domain_name] = data
                 elif rtype == "NS":
                     if domain_name in self.ns:
                         self.ns[domain_name].append(data)
