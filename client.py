@@ -35,7 +35,7 @@ def client(server_port, qname, qtype, timeout):
 
             for rr in rrs:
                 print(f"{rr.str_type.upper()} SECTION:")
-                print(rr.payload, "\n")
+                print(rr.payload)
 
         except socket.timeout:
             print(f"ERR: socket timed out after {timeout} seconds")

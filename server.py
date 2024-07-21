@@ -83,18 +83,26 @@ class Server:
             return self.find_record(qtype, self.cname[qname], ans_str, auths_str, adds_str)
         else:
             # no match
-            sections = qname.split(".")  # todo could break if qname is "."
+            sections = qname.split(".")
             sections.pop(0)
-            ancestor = ".".join(sections) + "."
+            if len(sections) == 1:
+                ancestor = "."
+            else:
+                ancestor = ".".join(sections)
 
+            # find the closest ancestor zone
             while ancestor not in self.ns:
                 sections.pop(0)
-                ancestor = ".".join(sections) + "."
+                if len(sections) == 1:
+                    ancestor = "."
+                else:
+                    ancestor = ".".join(sections)
 
             for val in self.ns[ancestor]:
                 auths_str += f"{ancestor} NS {val}\n"
-                for addr in self.addr[val]:
-                    adds_str += f"{val} A {addr}\n"
+                if val in self.addr:
+                    for addr in self.addr[val]:
+                        adds_str += f"{val} A {addr}\n"
 
         return ans_str, auths_str, adds_str
 
