@@ -26,7 +26,7 @@ def client(server_port, qname, qtype, timeout):
         sock.sendto(data, ("localhost", server_port))
 
         try:
-            res, _ = sock.recvfrom(1024)
+            res, _ = sock.recvfrom(2048)
             header, question, rrs = decode_response(res)
 
             for rr in rrs:

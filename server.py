@@ -44,13 +44,13 @@ class Server:
 
         while True:
             try:
-                data, addr = self.sock.recvfrom(1024)
+                data, addr = self.sock.recvfrom(2048)
                 header, question = decode_request(data)
                 child = threading.Thread(target=self.process_request, args=(header, question, addr))
                 child.start()
 
             except ConnectionResetError:
-                print(f"ERR: Connection closed by {addr[1]}")
+                print(f"WARN: Connection closed by {addr[1]}")
 
     def process_request(self, header, question, addr):
         delay = random.randrange(5)
