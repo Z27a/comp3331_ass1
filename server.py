@@ -1,7 +1,9 @@
 import datetime
+import random
 import sys
 import socket
 import time
+import threading
 
 from msg import *
 
@@ -27,14 +29,14 @@ class Server:
                         self.addr[domain_name] = [data]
                 elif rtype == "CNAME":
                     if domain_name in self.cname:
-                        self.cname[domain_name].append(data)
+                        print(f"ERR: multiple CNAME entries found for {domain_name} in master file")
                     else:
-                        self.cname[domain_name] = [data]
+                        self.cname[domain_name] = data
                 elif rtype == "NS":
                     if domain_name in self.ns:
-                        self.cname[domain_name].append(data)
+                        self.ns[domain_name].append(data)
                     else:
-                        self.cname[domain_name] = [data]
+                        self.ns[domain_name] = [data]
                 else:
                     print("ERR: Record type mismatch in master file!")
 
@@ -42,12 +44,14 @@ class Server:
         print(f'Server running on localhost:{self.server_port}...')
 
         while True:
-            data, addr = self.sock.recvfrom(1024)
-            header, question = decode_request(data)
-            self.process_request(header, question, addr)
+            try:
+                data, addr = self.sock.recvfrom(1024)
+                header, question = decode_request(data)
+                child = threading.Thread(target=self.process_request, args=(header, question, addr))
+                child.start()
 
-            # child = threading.Thread(target=self._process_request, args=(data, addr))
-            # child.start()
+            except ConnectionResetError:
+                print(f"ERR: Connection closed by {addr[1]}")
 
     def process_request(self, header, question, addr):
         delay = random.randrange(5)
@@ -58,15 +62,13 @@ class Server:
         ans_str, auths_str, adds_str = self.find_record(question.str_type, question.payload)
         response = self.make_response(header, question, ans_str, auths_str, adds_str)
 
-        print(
-            f"{datetime.datetime.now()} snd {addr[1]}: {header.qid} {question.payload} {question.str_type} (delay: {delay}s)")
+        print(f"{datetime.datetime.now()} snd {addr[1]}: {header.qid} {question.payload} {question.str_type}")
         self.sock.sendto(response, addr)
 
     def find_record(self, qtype, qname, ans_str="", auths_str="", adds_str=""):
         if qtype == "CNAME" and qname in self.cname:
             # direct match CNAME
-            for val in self.cname[qname]:
-                ans_str += f"{qname} CNAME {val}\n"
+            ans_str += f"{qname} CNAME {self.cname[qname]}\n"
         elif qtype == "A" and qname in self.addr:
             # direct match A
             for val in self.addr[qname]:
@@ -77,12 +79,11 @@ class Server:
                 ans_str += f"{qname} NS {val}\n"
         elif qtype != "CNAME" and qname in self.cname:
             # indirect match, recurse with CNAME
-            for val in self.cname[qname]:
-                ans_str += f"{qname} CNAME {val}\n"
+            ans_str += f"{qname} CNAME {self.cname[qname]}\n"
             return self.find_record(qtype, self.cname[qname], ans_str, auths_str, adds_str)
         else:
             # no match
-            sections = qname.split(".")  # could break if qname is "."
+            sections = qname.split(".")  # todo could break if qname is "."
             sections.pop(0)
             ancestor = ".".join(sections) + "."
 

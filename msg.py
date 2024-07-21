@@ -1,6 +1,4 @@
 import struct
-import random
-
 
 class Header:
     def __init__(self, size: int, qid: int):
@@ -69,65 +67,6 @@ class ResourceRecord(VarLength):
     def decode_header(data):
         return super(ResourceRecord, ResourceRecord)._decode_header(
             data, {1: "Answer", 2: "Authority", 3: "Additional"})
-
-
-# class Question:
-#     def __init__(self, qtype: str, qname: str):
-#         self.qtype = qtype
-#         self.qname = qname
-#
-#     def encode(self):
-#         ba = bytearray()
-#         ba.extend(struct.pack('<H', len(self.qname)))
-#         ba.extend(struct.pack('<H', QTYPE_TO_ID[self.qtype]))
-#         ba.extend(struct.pack(f'<{len(self.qname)}s', self.qname.encode()))
-#         return bytes(ba)
-#
-#     @staticmethod
-#     def decode_header(data):
-#         size = struct.unpack_from('<H', data, 0)[0]
-#         qtype_id = struct.unpack_from('<H', data, 2)[0]
-#         return size, ID_TO_QTYPE[qtype_id]
-#
-#     @staticmethod
-#     def decode_qname(size, data):
-#         qname = struct.unpack_from(f'<{size}s', data, 0)[0]
-#         return qname.decode()
-
-
-# class ResourceRecord:
-#     def __init__(self, rtype: str, records: str):
-#         self.rtype = rtype
-#         self.records = records
-#
-#     def encode(self):
-#         ba = bytearray()
-#         ba.extend(struct.pack('<H', len(self.records)))
-#         ba.extend(struct.pack('<H', RTYPE_TO_ID[self.rtype]))
-#         ba.extend(struct.pack(f'<{len(self.records)}s', self.records.encode()))
-#         return bytes(ba)
-#
-#     @staticmethod
-#     def decode_header(data):
-#         size = struct.unpack_from('<H', data, 0)[0]
-#         rtype_id = struct.unpack_from('<H', data, 2)[0]
-#         return size, ID_TO_RTYPE[rtype_id]
-#
-#     @staticmethod
-#     def decode_record(size, data):
-#         records = struct.unpack_from(f'<{size}s', data, 0)[0]
-#         return records.decode()
-
-def make_request(qname: str, qtype: str):
-    question = Question(qtype, qname).encode()
-    qid = random.randrange(65535)
-    header = Header(len(question), qid).encode()
-
-    ba = bytearray()
-    ba.extend(header)
-    ba.extend(question)
-    return bytes(ba), qid
-
 
 def decode_request(data):
     header = Header.decode(data[:4])

@@ -1,7 +1,18 @@
+import random
 import sys
 import socket
 
 from msg import *
+
+def make_request(qname: str, qtype: str):
+    question = Question(qtype, qname).encode()
+    qid = random.randrange(65535)
+    header = Header(len(question), qid).encode()
+
+    ba = bytearray()
+    ba.extend(header)
+    ba.extend(question)
+    return bytes(ba), qid
 
 
 def client(server_port, qname, qtype, timeout):
@@ -9,19 +20,22 @@ def client(server_port, qname, qtype, timeout):
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.settimeout(timeout)
-        print(f"Sending request to {server_port}, qid: {qid}")
+        print(f"QID: {qid}\n")
+        print("QUESTION SECTION:")
+        print(qname, qtype, "\n")
         sock.sendto(data, ("localhost", server_port))
 
         try:
             res, _ = sock.recvfrom(1024)
             header, question, rrs = decode_response(res)
 
+            # todo: remove
             if header.qid != qid:
                 print("ERR: qids do not match")
 
             for rr in rrs:
-                print(f"{rr.str_type}:")
-                print(rr.payload)
+                print(f"{rr.str_type.upper()} SECTION:")
+                print(rr.payload, "\n")
 
         except socket.timeout:
             print(f"ERR: socket timed out after {timeout} seconds")
