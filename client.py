@@ -4,11 +4,16 @@ import socket
 
 from msg import *
 
+
 def make_request(qname: str, qtype: str):
+    # create question
     question = Question(qtype, qname).encode()
+
+    # create header
     qid = random.randrange(65535)
     header = Header(len(question), qid).encode()
 
+    # create byets object
     ba = bytearray()
     ba.extend(header)
     ba.extend(question)
@@ -19,13 +24,16 @@ def client(server_port, qname, qtype, timeout):
     data, qid = make_request(qname, qtype)
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.settimeout(timeout)
         print(f"QID: {qid}\n")
         print("QUESTION SECTION:")
         print(qname, qtype, "\n")
+
+        # send data
+        sock.settimeout(timeout)
         sock.sendto(data, ("localhost", server_port))
 
         try:
+            # receive data
             res, _ = sock.recvfrom(2048)
             header, question, rrs = decode_response(res)
 

@@ -8,6 +8,35 @@ import threading
 from msg import *
 
 
+def make_response(header, question, ans, auth, add):
+    question = question.encode()
+    size = len(question)
+
+    # encode resource records
+    if ans != "":
+        ans = ResourceRecord("Answer", ans).encode()
+        size += len(ans)
+    if auth != "":
+        auth = ResourceRecord("Authority", auth).encode()
+        size += len(auth)
+    if add != "":
+        add = ResourceRecord("Additional", add).encode()
+        size += len(add)
+
+    # create byte object
+    ba = bytearray()
+    ba.extend(Header(size, header.qid).encode())
+    ba.extend(question)
+    if ans != "":
+        ba.extend(ans)
+    if auth != "":
+        ba.extend(auth)
+    if add != "":
+        ba.extend(add)
+
+    return bytes(ba)
+
+
 class Server:
     def __init__(self, server_port):
         self.server_port = server_port
@@ -19,6 +48,7 @@ class Server:
 
         with open("master.txt") as f:
             lines = f.read().split("\n")
+            # process master file
             for line in lines:
                 line = line.split()
                 domain_name, rtype, data = line[0], line[1], line[2]
@@ -44,8 +74,10 @@ class Server:
 
         while True:
             try:
+                # receive data
                 data, addr = self.sock.recvfrom(2048)
                 header, question = decode_request(data)
+                # delegate processing to thread
                 child = threading.Thread(target=self.process_request, args=(header, question, addr))
                 child.start()
 
@@ -53,14 +85,17 @@ class Server:
                 print(f"WARN: Connection closed by {addr[1]}")
 
     def process_request(self, header, question, addr):
+        # sleep the thread
         delay = random.randrange(5)
-        print(
-            f"{datetime.datetime.now()} rcv {addr[1]}: {header.qid} {question.payload} {question.str_type} (delay: {delay}s)")
+        print(f"{datetime.datetime.now()} rcv {addr[1]}: {header.qid} {
+                question.payload} {question.str_type} (delay: {delay}s)")
         time.sleep(delay)
 
+        # get resource records and make response
         ans_str, auths_str, adds_str = self.find_record(question.str_type, question.payload)
-        response = self.make_response(header, question, ans_str, auths_str, adds_str)
+        response = make_response(header, question, ans_str, auths_str, adds_str)
 
+        # send response
         print(f"{datetime.datetime.now()} snd {addr[1]}: {header.qid} {question.payload} {question.str_type}")
         self.sock.sendto(response, addr)
 
@@ -81,15 +116,13 @@ class Server:
             ans_str += f"{qname} CNAME {self.cname[qname]}\n"
             return self.find_record(qtype, self.cname[qname], ans_str, auths_str, adds_str)
         else:
-            # no match
+            # no match, find the closest ancestor zone
             sections = qname.split(".")
             sections.pop(0)
             if len(sections) == 1:
                 ancestor = "."
             else:
                 ancestor = ".".join(sections)
-
-            # find the closest ancestor zone
             while ancestor not in self.ns:
                 sections.pop(0)
                 if len(sections) == 1:
@@ -97,6 +130,7 @@ class Server:
                 else:
                     ancestor = ".".join(sections)
 
+            # add values to authority and additional section
             for val in self.ns[ancestor]:
                 auths_str += f"{ancestor} NS {val}\n"
                 if val in self.addr:
@@ -104,32 +138,6 @@ class Server:
                         adds_str += f"{val} A {addr}\n"
 
         return ans_str, auths_str, adds_str
-
-    def make_response(self, header, question, ans, auth, add):
-        question = question.encode()
-        size = len(question)
-
-        if ans != "":
-            ans = ResourceRecord("Answer", ans).encode()
-            size += len(ans)
-        if auth != "":
-            auth = ResourceRecord("Authority", auth).encode()
-            size += len(auth)
-        if add != "":
-            add = ResourceRecord("Additional", add).encode()
-            size += len(add)
-
-        ba = bytearray()
-        ba.extend(Header(size, header.qid).encode())
-        ba.extend(question)
-        if ans != "":
-            ba.extend(ans)
-        if auth != "":
-            ba.extend(auth)
-        if add != "":
-            ba.extend(add)
-
-        return bytes(ba)
 
 
 if __name__ == '__main__':
