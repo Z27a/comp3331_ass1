@@ -54,18 +54,18 @@ class Server:
                 domain_name, rtype, data = line[0], line[1], line[2]
                 if rtype == "A":
                     if domain_name in self.addr:
-                        self.addr[domain_name].append(data)
+                        self.addr[domain_name].add(data)
                     else:
-                        self.addr[domain_name] = [data]
+                        self.addr[domain_name] = {data}
                 elif rtype == "CNAME":
                     if domain_name in self.cname:
                         print(f"WARN: multiple CNAME entries found for {domain_name} in master file")
                     self.cname[domain_name] = data
                 elif rtype == "NS":
                     if domain_name in self.ns:
-                        self.ns[domain_name].append(data)
+                        self.ns[domain_name].add(data)
                     else:
-                        self.ns[domain_name] = [data]
+                        self.ns[domain_name] = {data}
                 else:
                     print("ERR: Record type mismatch in master file!")
 
